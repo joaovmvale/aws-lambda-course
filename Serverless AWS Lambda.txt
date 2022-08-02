@@ -1,0 +1,258 @@
+** Serverless na AWS
+# 1 - Introdução.
+
+# 2 - Conhecendo o AWS Lambda:
+	- O Lambda provê uma máquina, com memória e capacidade computacional de acordo com a necessidade da aplicação.
+	- Na aplicação é definido a quantidade de memória e o resto fica por conta da aplicação.
+	
+	* Definição de preço:
+		- A cobrança é feita pela quantidade de vezes que a aplicação é executada.
+		
+	* Vantagens:
+		- Normalmente é mais barato rodar uma instância do lambda do que der uma aplicação 24/7.
+		- Em condição de Serverless, não é necessário se preocupar com o servidor:
+			. SO, Patches, Atualização etc.
+	
+	* Suporte do Lambda às linguagens de programação:
+		- C#, Go, Java, Node, Python, Ruby etc.
+	
+	* Por que seguir o caminho do Serverless?
+		- Manutenção baixa
+		- Escalabilidade (Fácil integração com outros serviços)
+		- Disponibilidade (Alta disponibilidade da infraestrutura da Amazon)
+
+# 3 - Questionário | Serviço AWS Lambda:
+	- Sobre o serviço AWS Lambda, é correto afirmar que:
+		R: É preciso configurar a quantidade de memória a ser utilizada.
+			. Alternativa correta! Precisamos definir o quanto de memória nossa função necessita. Atualmente, o mínimo é de 128MB.
+		R: É preciso configurar o tempo máximo de execução da função.
+			. Alternativa correta! Sim, configuramos um tempo máximo para nossa função. Caso ela não seja concluída dentro deste tempo, a mesma é encerrada!
+
+# 4 - Hello World com AWS Lamda
+	- Criando uma função na AWS:
+		. Console AWS -> Lambda -> Criar função
+		. -> Author from scratch (Cria uma função do zero)
+			. Name: Nome da função
+			. Runtime: Linguagem a ser processada
+			. Role: Permissões da função que está sendo criada
+	
+	- Editando e testando a função:
+		- Após editar as funções, é necessário fazer o deploy das mesmas.
+		- Editando os recursos da função:
+			. Monitoration -> É possível ver todo o histórico de recursos usados na execução da função.
+			. Configuration -> É possível editar os recursos alocados pra função, como memória e timeout.
+		- Testando a função:
+			. Para testar a função é necessário criar um trigger.
+
+# 5 - Questionário | Detalhes da função
+	- Ao executarmos uma função, é mostrado como saída um sumário com algumas informações relevantes, dentre elas:
+		R: Resources configured - Mostra o quanto de memória foi alocado para a função.
+			. Alternativa correta! Este campo nos mostra o quanto de memória foi reservado para a função.
+		R: Max memory used - Mostra o quanto de memória sua função realmente utilizou.
+			. Alternativa correta! Este campo é importante para que você verifique se a reserva de memória está adequada à sua função. É interessante sempre deixar uma margem de segurança!
+
+# 6 - Executar os passos aprendidos na aula
+
+** Entrada e saída
+# 1 - Execução periódica
+	- Por padrão, a função criada é linkada à um CloudWatch, onde é possível analisar os logs de execução do Lambda.
+	- No Event Bridge (CloudWatch Events) é possível gerar um agendamento (cron) da função criada.
+		- Basta adicionar um EventBridge aos triggers da função e criar uma regra com base na necessidade.
+		- Nesse caso, iremos criar um scheduler, portanto é preciso criar a regra ou usar uma já existente.
+		- Sintaxe de nova regra:
+			- Rule name: "Nome da regra"
+			- Rule type: "Com padrão de evento ou com expressão"
+			- Schedule expression: "Expressão com sintaxe de cron"
+				- Ex: Tabela de expressões = https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-create-rule-schedule.html#eb-cron-expressions
+	- Entrada: Trigger
+	- Saída: Logs
+
+# 2 - Agendamento da função | Questionário
+	- Para agendarmos nossa função backup, para que a mesma seja executada todos os dias às 01:05 da manhã, devemos utilizar a seguinte sintaxe:
+		R: cron(5 1 * * ? *)
+			. Alternativa correta! Os campos utilizados no cron da AWS são: minutos, horas, dia do mês, mês, dia da semana e ano. O interrogação no dia da semana representa todos os dias da semana!
+
+# 3 - Criando um trigger
+	- É possível criar um trigger como consequência de uma ação:
+		- Ex: Executar um lambda quando um arquivo é inserido no bucket S3
+	- Iremos criar um trigger que é acionado quando um arquivo com o sufixo '.png' é inserido no bucket linkado ao Lambda.
+		- Basta criar um bucket, linkar ele à um trigger do Lambda criado e pronto.
+			. Obs: É possível criar filtros, como por exemplo, sufixo e prefixo do nome do arquivo.
+			
+# 4 - Triggers | Questionário
+	- Para executar sua função, a mesma deve estar associada a um trigger.
+	Quais das alternativas abaixo podem funcionar como um trigger?
+		R: Todas as opções citadas
+
+# 5 Consolidando o seu conhecimento
+	- OK
+
+** Construindo nossa aplicação
+# 1 - Aplicação de análise de faces
+	- A aplicação consiste em identificar as faces das imagens inseridas em um bucket e apontar o grau de similaridade com faces
+	já cadastradas na aplicação.
+
+# 2 - Listando as imagens
+		import boto3
+
+		def list_images(bucket_name: str):
+			s3 = boto3.resource("s3")
+			bucket = s3.Bucket(bucket_name)
+			images = [image.key for image in bucket.objects.all()]
+			print(images)
+			return images
+
+		images = list_images(bucket_name="fa-imagens-jovi")
+
+# 3 - Conectando ao bucket S3 | Questionário
+	- Era um código com erro na conexão com o bucket, não estava indicando qual o nome do bucket.
+
+# 4 - Indexando a coleção
+	- Upload de arquivos para o bucket via linha de comando:
+		. aws s3 sync . s3://bucket-name
+	
+	- Para listar as collections criadas pelo rekognition:
+		. aws rekognition list-collections
+	
+	- Para listar o conteudo de uma collection específica:
+		. aws rekognition list-faces --collection-id collection-name
+
+# 5 - Consultando as imagens indexadas | Questionário:
+	- Depois de indexar nossas imagens, é possível também fazer uma consulta através do AWS CLI. Qual comando/sintaxe podemos utilizar para listar todas as imagens de uma coleção?
+		R: aws rekognition list-faces --collection-id collection-name
+			. Alternativa correta! Com a opção list-faces, é possível obter uma lista das imagens previamente indexadas. Uma dica é utilizar o grep para filtrar sua saída.
+			
+# 6 - Consolidando o seu conhecimento:
+	- OK
+
+** Análise de faces
+# 1 - Preparando o código para o AWS Lambda
+	- Criando um código que irá analisar a imagem a ser comparada
+
+# 2 - Detalhes na chamada de função
+	- É importante observar como devemos chamar a função dentro do ambiente do AWS Lambda. Para a configuração do campo Handler, deve ser o padrão:
+		R: filename.funcao
+			. Alternativa correta! Exatamente, o campo Handler deve ser preenchido com o nome do arquivo seguido do nome da função. Por exemplo, faceanalise.main, onde faceanalise é o nome do arquivo e main é a função principal do nosso código.
+
+# 3 - Detectando faces:
+	- Copying an archive to the bucket:
+		. aws s3 cp .\_analysis.jpg s3://fa-imagens-jovi-course
+
+	- Created a function that recognize faces on a image
+
+# 4 - Indexando faces em uma imagem | Questionário:
+	- O primeiro passo da nossa aplicação é analisar/descobrir se existem faces em uma determinada imagem. Para tanto, é preciso utilizar a seguinte função em nosso código:
+		R: index_faces()
+			. Alternativa correta! A função index_faces() identifica as faces em uma imagem de origem e adiciona o resultado em uma coleção.
+
+# 5 - Extraindo os IDs
+	- FaceRecords -> Face -> FaceId
+
+	- Criando uma função que cria uma lista de ids a partir das faces detectadas
+
+# Consolidando seu conhecimento
+	- OK
+
+** Comparando imagens
+# 1 - Comparando as imagens
+	- Criando uma função que utiliza o recurso '.search_faces' do rekognition.
+	- No atributo 'FaceMatchThreshold' é possível definir o nível mínimo de similaridade desejado
+
+# 2 - Comparando as imagens | Questionário:
+	- Agora que já temos as imagens, é hora de fazer as comparações. Qual a função que deve ser utilizada para fazer a comparação entre IDs?
+		R: search_faces()
+			. Alternativa correta! Utilizamos a função search_faces para pesquisar um ID em uma determinada coleção. Desta forma, podemos fazer a comparação entre os IDs e saber se uma determinada face foi encontrada!
+
+# 3 - Formatando os dados:
+	- Gerando um JSON a partir dos dados gerados pela função search_faces
+
+# 4 - Visualizando os dados | Questionário:
+	- Para facilitar a visualização dos dados a fim de obter um detalhamento melhor, podemos formatar melhor a nossa saída. No exemplo abaixo, foi utilizada qual formatação?
+		{
+			'SearchedFaceId': 'string',
+			'FaceMatches': [
+					{
+							'Similarity': ...,
+							'Face': {
+									'FaceId': 'string',
+									'BoundingBox': {
+											'Width': ...,
+											'Height': ...,
+											'Left': ...,
+											'Top': ...
+									}, ...
+		R: JSON
+			. Alternativa correta! Formatando a saída desta forma, fica mais fácil a visualização e a identificação das hierarquias. Utilizando o json.dumps é possível inclusive escolher a indentação com o indent=X.
+
+# 5 - Testando a saída de dados
+	- Criando uma funçãp que transforma os dados recebidor em um json
+
+# 6 - Consolidando conhecimento
+	- OK
+
+** Front-end da aplicação
+# 1 - Criando o front-end:
+	- Criando um bucket com permissões para website.
+
+# 2 - Um front-end para a aplicação | Questionário
+	- Seguindo a mesma temática da nossa aplicação (Serverless), a AWS permite que seja hospedado um site (estático) sem a necessidade de provisionar um servidor. Isto é possível através do serviço:
+		R: S3
+			. Alternativa correta! Apesar do S3 ser um serviço de "drive de rede", existe a opção de transformá-lo em um site estático. Nas propriedade do bucket, utilize a opção Static website hosting. Assim você terá um site sem precisar administrar servidor/aplicação!
+
+# 3 - Publicando o site
+	- Enviando a pasta do frontend para o bucket
+		. aws s3 sync . s3://fa-site-jovi-course
+
+# 4 - Upload do site | Questionário
+	- Estar familiarizado com o uso da CLI facilita o trabalho e economiza tempo! Sendo assim, qual a forma mais rápida de atualizar os arquivos em um bucket S3?
+		R: aws s3 sync
+			. Alternativa correta! Com o comando sync, você sincroniza os dados de um diretório local com o bucket S3. Ou seja, ele copia somente os arquivos que não existam ou foram alterados.
+
+# 5 - Corrigindo o permissionamento
+	- Changed CORS configuration from the bucket
+		. [
+				{
+						"AllowedHeaders": [
+								"*"
+						],
+						"AllowedMethods": [
+								"GET"
+						],
+						"AllowedOrigins": [
+								"*"
+						],
+						"ExposeHeaders": [
+								"x-amz-server-side-encryption",
+								"x-amz-request-id",
+								"x-amz-id-2"
+						],
+						"MaxAgeSeconds": 3000
+				}
+			]
+
+# 6 - Permissionamentos S3 | Questionário
+	- Considerando a utilização do bucket como site estático, qual permissionamento mínimo é necessário para que o mesmo esteja acessível na web?
+		R: Bucket Policy - GetObject
+			. Alternativa correta! Utilizando o GetObject, você está autorizando o usuário a "pegar" o conteúdo, ou seja, concedendo o acesso!
+
+# 7 - Consolidando o seu conhecimento:
+	- OK
+
+** Ambiente de produção
+# 1 - Finalizando o código
+	- OK
+
+# 2 - Questionário - Ajustes Finais
+	- R: delete_faces()
+		. Alternativa correta! Apagar as faces e manter a coleção é a forma mais rápida para quem quer reutilizar a base já criada.
+
+# 3 - Colocando em produção
+	- Alterando algumas coisas e colocando o código no lambda.
+	- É possivel subir o código utilizando o comando aws lambda update-function ou diretamente no lambda.
+
+# 4 - Questionário - Upload do código
+	- Após finalizada a parte de programação, é necessário fazer o upload do código para o AWS Lambda. Além do console (AWS), é possível e recomendável utilizar a CLI. Sendo assim, para fazer o envio devemos utilizar o comando:
+		R: update-function-code
+			. Alternativa correta! O comando update-function-code faz o upload do código. É importante registrar que, para o correto funcionamento, é necessário que a função já esteja criada no ambiente Lambda.
+
+# 5 - 
